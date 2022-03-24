@@ -1,2 +1,2 @@
 # Scraper-for-FI
-A sunoke scraper for FI
+A simple scraper for FI

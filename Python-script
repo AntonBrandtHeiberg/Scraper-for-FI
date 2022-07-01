@@ -1,0 +1,41 @@
+%config Completer.use_jedi = False
+
+import yfinance as yf
+import pandas as pd
+#Import of all data
+#ticker = yf.Ticker('PNDX-B.ST')
+data = yf.download("PNDX-B.ST", start = "2021-02-02", end = "2021-04-01")
+ 
+getDate('PNDX-B.ST', "2021-01-01", "2022-01-01")
+def getDate(stock, startDate, endDate):
+    stockData = yf.download(stock, start = startDate, end = endDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
+    #and the start/end date is "yyyy-mm-dd"
+    indexData = yf.download('^OMXSPI', start = startDate, end = endDate)
+    stockDevelopment(stockData, indexData)#creating a dataframe with stock-index development
+    
+#Analyzes the stock-progress 
+def stockDevelopment(stockData, indexData):
+    df = pd.DataFrame(
+        {
+        "Date": [], "StockPercentage": [], "IndexPercentage":[]
+    })
+    startStockPrice = stockData['Close'].values[0]
+    startIndexVal = indexData['Close'].values[0]
+    #adds start-data to frame
+    df.loc[0] = [convertDateToString(0, stockData), 0, 0]
+    print(len(stockData) / 5)
+    for i in range (int(len(stockData) / 5)):
+        df.loc[i*5] = [convertDateToString(i*5, stockData), valueChange(stockData['Close'].values[i*5], startStockPrice), 
+                 valueChange(indexData['Close'].values[i*5], startIndexVal)]
+        
+    print(df)
+    
+def valueChange(currentValue, startValue):
+                 return (currentValue/startValue - 1)*100
+    
+def convertDateToString(i, dataFrame): #Takes one of the dataframes (that are indexed by date, which complicates things...
+    #and turn these dates to strings for usage in the stock-dev function)
+    dateTimes = dataFrame.index.values
+    date = str(dateTimes[i]).split("T")[0]
+    return date
+

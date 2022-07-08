@@ -2,36 +2,69 @@
 
 import yfinance as yf
 import pandas as pd
+class Stock:
+    def __init__ (self, name, yfName):
+        self.name = name
+        self.yfName = yfName
+    def getName(self):
+        return self.name
+    def getYFName(self):
+        return self.yfName
+    
 #Import of all data
 #ticker = yf.Ticker('PNDX-B.ST')
-data = yf.download("PNDX-B.ST", start = "2021-02-02", end = "2021-04-01")
- 
-getDate('PNDX-B.ST', "2021-01-01", "2022-01-01")
-def getDate(stock, startDate, endDate):
+#Creating the stocks with a stock-class
+stocks = [Stock("Pandox", "PNDX-B.ST"), Stock("Volvo", "VOLV-B.ST"), Stock("Electrolux", "ELUX-B.ST"), 
+          Stock("Ericsson", "ERIC-B.ST"), Stock("H&M","HM-B.ST"), Stock("SEB", "SEB-A.ST"), 
+          Stock("Swedbank", "SWED-A.ST"), Stock("Tele2", "TEL2-B.ST"), Stock("SKF", "SKF-B.ST"), Stock("Sandvik", "SAND.ST"),
+          Stock("Skanska", "SKA-B.ST")]
+print(stocks[1].getYFName())
+
+yfName = stocks[1].getYFName()
+#data = yf.download(yfName, start = "2021-02-02", end = "2021-04-01") 
+
+getDate(yfName, "2021-01-01", "2022-01-01", 12)
+
+#Returns the dates
+def getDate(stock, startDate, endDate, dateInterval = 5):
     stockData = yf.download(stock, start = startDate, end = endDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
     #and the start/end date is "yyyy-mm-dd"
     indexData = yf.download('^OMXSPI', start = startDate, end = endDate)
-    stockDevelopment(stockData, indexData)#creating a dataframe with stock-index development
+    stockDevelopment(stockData, indexData, dateInterval)#creating a dataframe with stock-index development
     
 #Analyzes the stock-progress 
-def stockDevelopment(stockData, indexData):
+def stockDevelopment(stockData, indexData, interval = 5):
     df = pd.DataFrame(
         {
-        "Date": [], "StockPercentage": [], "IndexPercentage":[]
+        "Date": [], "StockPercentage": [], "IndexPercentage":[], "Difference_StockVIndex":[]
     })
     startStockPrice = stockData['Close'].values[0]
     startIndexVal = indexData['Close'].values[0]
     #adds start-data to frame
-    df.loc[0] = [convertDateToString(0, stockData), 0, 0]
-    print(len(stockData) / 5)
-    for i in range (int(len(stockData) / 5)):
-        df.loc[i*5] = [convertDateToString(i*5, stockData), valueChange(stockData['Close'].values[i*5], startStockPrice), 
-                 valueChange(indexData['Close'].values[i*5], startIndexVal)]
+    df.loc[0] = [convertDateToString(0, stockData), 0, 0, 0]
+   
+#Takes the minimum as range due to the length of indexData and stockData not being the same (?!)
+    for i in range (min(int(len(stockData) / interval), int(len(indexData)/interval))):
         
-    print(df)
+        stockPer = valueChange(stockData['Close'].values[i*interval], startStockPrice)
+        indexPer = valueChange(indexData['Close'].values[i*interval], startIndexVal)
+        
+        df.loc[i*interval] = [convertDateToString(i*interval, stockData), stockPer, indexPer, (stockPer-indexPer)]
+        
+    analyzeDataFrame(df)
     
+    #Returns the % difference from startvalue and currentvalue
 def valueChange(currentValue, startValue):
                  return (currentValue/startValue - 1)*100
+                 
+#The method analyzing the data            
+def analyzeDataFrame(df):
+    minVal = df['Difference_StockVIndex'].min(axis=0)
+    min_index = df['Difference_StockVIndex'].idxmin()
+    maxVal = df['Difference_StockVIndex'].max(axis=0)
+    max_index = df['Difference_StockVIndex'].idxmax()
+    print(minVal, " at: " ,min_index,  " and max val: " ,maxVal, " at: " ,max_index,)
+    
     
 def convertDateToString(i, dataFrame): #Takes one of the dataframes (that are indexed by date, which complicates things...
     #and turn these dates to strings for usage in the stock-dev function)

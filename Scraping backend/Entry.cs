@@ -1,17 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Scraping_v1
+namespace Scraping_HTMLAgilityPack
 {
     class Entry
     {
         private double kurs;
         private double volym;
-        private string datum;
+        private DateTime datum;
         private double indexOMX;
 
-        public Entry(double kurs, double volym, string datum, double indexOMX){
+        public Entry(double kurs, double volym, DateTime datum, double indexOMX)
+        {
             this.kurs = kurs;
             this.volym = volym;
             this.datum = datum;
@@ -30,10 +31,10 @@ namespace Scraping_v1
             set { this.volym = Volym; }
         }
 
-        public string Datum
+        public DateTime Datum
         {
             get { return datum; }
-            set { this.volym = Volym; }
+            set { this.datum = Datum; }
         }
 
         public double IndexOMX
@@ -44,7 +45,7 @@ namespace Scraping_v1
 
         public override string ToString()
         {
-            return "datum: " + datum + ", volym: " + volym + ", kurs: " + kurs + ", indexOMX: " + indexOMX;
+            return "datum: " + datum.Year + "/" + datum.Month + "/" + datum.Day + ", volym: " + volym + ", kurs: " + kurs + ", indexOMX: " + indexOMX;
         }
     }
 }

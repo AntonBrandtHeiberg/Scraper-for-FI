@@ -22,12 +22,11 @@ namespace PythonFromCSharp
 
         private void btn_run_Click(object sender, EventArgs e)
         {
-
+            //Run with cmd to python (working)
             var psi = new ProcessStartInfo();
-            psi.FileName = @"C:\Users\David\AppData\Local\Programs\Python\Python37\python.exe"; //Path to the python.exe file
-            var script = @"C:\Users\David\Desktop\Programmering\Test_Grejer\PythonFromCSharp\python.py"; //Path to the script
-            //These two lines above are very important, change the path for what your .py file is called and where your python.exe is located!
-            psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
+            psi.FileName = "cmd.exe";
+            psi.Arguments = @"/c " + "python C:\\Users\\David\\Documents\\Python\\StockProj.py";
+            //psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;
             psi.RedirectStandardOutput = true;
@@ -40,8 +39,28 @@ namespace PythonFromCSharp
                 errors = process.StandardError.ReadToEnd();
                 result = process.StandardOutput.ReadToEnd();
             }
+            
+            //Run through python.exe and the script
+            //var psi = new ProcessStartInfo();
+            //psi.FileName = @"C:\Users\David\AppData\Local\Programs\Python\Python37\python.exe"; //Path to the python.exe file
+            //var script = @"C:\Users\David\Desktop\Programmering\Test_Grejer\PythonFromCSharp\python.py"; //Path to the script
+            //These two lines above are very important, change the path for what your .py file is called and where your python.exe is located!
+            //psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
+            //psi.UseShellExecute = false;
+            //psi.CreateNoWindow = true;
+            //psi.RedirectStandardOutput = true;
+            //psi.RedirectStandardError = true;
+            
+            //var errors = "";
+            //var result = "";
+            //using (var process = Process.Start(psi))
+            //{
+            //   errors = process.StandardError.ReadToEnd();
+            //    result = process.StandardOutput.ReadToEnd();
+            //}
                 
             tbx_out.Text = result;
+            MessageBox.Show(errors);
         }
     }
 }

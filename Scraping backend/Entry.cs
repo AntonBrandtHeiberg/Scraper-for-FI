@@ -45,7 +45,7 @@ namespace Scraping_HTMLAgilityPack
 
         public override string ToString()
         {
-            return "datum: " + datum.Year + "/" + datum.Month + "/" + datum.Day + ", volym: " + volym + ", kurs: " + kurs + ", indexOMX: " + indexOMX;
+            return "datum: " + datum.ToShortDateString() + ", volym: " + String.Format("{0:# ###}", volym) + ", kurs: " + kurs + ", indexOMX: " + indexOMX;
         }
     }
 }

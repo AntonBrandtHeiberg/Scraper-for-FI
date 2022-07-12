@@ -1,0 +1,46 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Threading.Tasks;
+using System.Diagnostics;
+using System.IO;
+
+namespace PythonFromCSharp
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void btn_run_Click(object sender, EventArgs e)
+        {
+
+            var psi = new ProcessStartInfo();
+            psi.FileName = @"C:\Users\David\AppData\Local\Programs\Python\Python37\python.exe"; //Path to the python.exe file
+            var script = @"C:\Users\David\Desktop\Programmering\Test_Grejer\PythonFromCSharp\python.py"; //Path to the script
+            psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+            
+            var errors = "";
+            var result = "";
+            using (var process = Process.Start(psi))
+            {
+                errors = process.StandardError.ReadToEnd();
+                result = process.StandardOutput.ReadToEnd();
+            }
+                
+            tbx_out.Text = result;
+        }
+    }
+}

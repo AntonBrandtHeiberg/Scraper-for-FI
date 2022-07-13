@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using HtmlAgilityPack;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Scraping_HTMLAgilityPack
 {
@@ -14,18 +15,6 @@ namespace Scraping_HTMLAgilityPack
             //here are all the important variables that dictate the rest of the code
             //all standard companies relevant to the study
             String[] företaglista = { "volvo", "electrolux", "ericsson", "H&M", "seb", "swedbank", "tele2", "skf", "skanska", "sandvik" };
-
-            string företag = "nordea";
-            DateTime startDate = StringToDate("2022 03 11");
-            DateTime endDate = StringToDate("2022 03 11");
-
-            //make sure startdate occurs before or on the same day as endDate
-            if(startDate > endDate)
-            {
-                throw new Exception("startDate is larger than endDate");
-            }
-
-            string interval = "0 0 1";
 
             //map with köptyper to make sure the equals function functions correctly
             Dictionary<string, string> köptyp = new Dictionary<string, string>
@@ -54,14 +43,33 @@ namespace Scraping_HTMLAgilityPack
                 { "status", 14 }
             };
 
+            //start of Scrape_i_FI, make this in to a method that takes a comperator or whatever for the requierments
+            //parameters: comperator (see: tableRow), startDate, endDate, företag
+
+            string företag = "nordea";
+            DateTime startDate = StringToDate("2021 09 08");
+            DateTime endDate = StringToDate("2021 09 09 ");
+
+            //make sure startdate occurs before or on the same day as endDate
+            if (startDate > endDate)
+            {
+                throw new Exception("startDate is larger than endDate");
+            }
+
+            //either: 0 0 0 and 0 0 1 does the same thing or throw exception for 0 0 0
+            string interval = "0 0 0";
+
             //sidor is the maximum amount of pages for that particular company and I get that int by scraping for the last available page
             int sidor = int.Parse(new HtmlAgilityPack.HtmlWeb().Load("https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
                     + företag +
                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=1"
                     ).DocumentNode.SelectSingleNode("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul/li[14]/a").InnerText.Substring(1));
-
+            
             //check the if statment with publiceringsdatum for more context
             bool passedEndDate = false;
+
+            //list of entries that match a criteria
+            List<Entry> entryList = new List<Entry>();
 
             //start going through the pages
             for (int i = 1; i <= sidor && !passedEndDate;  i++)
@@ -76,8 +84,6 @@ namespace Scraping_HTMLAgilityPack
                 var web = new HtmlAgilityPack.HtmlWeb();
                 var doc = web.Load(url);
 
-                List<Entry> entryList = new List<Entry>();
-                
                 //Find every tablerow (tr) node via this xPath expression
                 foreach (var item in doc.DocumentNode.SelectNodes("/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/table[1]/tbody[1]/tr"))
                 {
@@ -104,8 +110,8 @@ namespace Scraping_HTMLAgilityPack
                     //check if the date is relevant at all...
                     if(startDate <= date && date <= endDate)
                     {
-                        //These are the requirments for what is relevant
-                        if (table[tableRow["köptyp"]].Equals(köptyp["avyttring"]) && table[tableRow["valuta"]].Equals("SEK"))
+                        //These are the requirments for what is a relevant entry
+                        if (table[tableRow["köptyp"]].Equals(köptyp["förvärv"]) && table[tableRow["valuta"]].Equals("SEK"))
                         {
                             //okay this looks strange but it's fine, trust me! It creates a new entry and adds it to the entrylist but how I get the attributes is a bit cheesy
                             //colList is the tablerow (tr) and it contains lots of rows of table data (td). Every tabledata is a string
@@ -114,21 +120,34 @@ namespace Scraping_HTMLAgilityPack
                             double kurs = Convert.ToDouble(table[tableRow["kurs"]].Replace("&#160;", String.Empty));
                             double volym = Convert.ToDouble(table[tableRow["volym"]].Replace("&#160;", String.Empty));
 
-                            Entry entry = new Entry(kurs, volym, date, 1.4); //1.4 will in the future be the result from the python script
+                            Entry entry = new Entry(kurs, volym, date, 1.4); //1.4 will in the future be the result from the python script instead
                             entryList.Add(entry);
                         }
                     }
                 }
-
-                //loop through entrylist and mash entries together according to dateInterval
-                List<EntryOverTime> entryOverTimeList = EntryMerger(entryList, interval);
-
-                //print them
-                foreach (Entry entry in entryList)
-                {
-                    Console.WriteLine(entry);
-                }
             }
+
+            //entrylist needs to be sorted before EntryMerger uses it!
+            List<Entry> sortedEntryList = entryList.OrderBy(o => o.Datum).ToList();
+
+            //print sortedEntryList
+            Console.WriteLine("Entries: ");
+            foreach (Entry entry in sortedEntryList)
+            {
+                Console.WriteLine(entry);
+            }
+
+            //loop through entrylist and mash entries together according to dateInterval
+            List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, interval);
+
+            //print allEntryOverTime
+            Console.WriteLine("EntryOverTime Objects: ");
+            foreach (EntryOverTime entry in entryOverTimeList)
+            {
+                Console.WriteLine(entry);
+                Console.WriteLine("---");
+            }
+
             watch.Stop();
             Console.WriteLine(watch.ElapsedMilliseconds);
         }
@@ -143,33 +162,25 @@ namespace Scraping_HTMLAgilityPack
         {
             List<EntryOverTime> entryOverTimeList = new List<EntryOverTime>();
 
-            //look trough entries
+            //look through entries
             for(int i = 0; i < entryList.Count; i++)
             {
-                //see if a next item exists
-                if(i+1 < entryList.Count)
+                double totalVolym = entryList[i].Volym;
+                double totalKurs = entryList[i].Kurs;
+
+                int nItemsSameDay = 1;
+
+                //while loop that checks if there are more entries and if the next entry's date matches the previous
+                while (i + 1 < entryList.Count && entryList[i].Datum.Equals(entryList[i + 1].Datum))
                 {
-                    double totalVolym = entryList[i].Volym;
-                    double totalKurs = entryList[i].Kurs;
-
-                    //check if the next item has the same date
-                    if (entryList[i].Datum.Equals(entryList[i+1].Datum))
-                    {
-                        //they belong in the same entry but we gotta check if the next one ALSO matches
-                        totalVolym = entryList[i].Volym + entryList[i+1].Volym;
-                        totalKurs = (entryList[i].Kurs + entryList[i+1].Kurs) / 2;
-
-                        //while loop that checks if there are more entries and if the next entry's date matches the previous
-                        while(i+2 < entryList.Count && entryList[i+1].Datum.Equals(entryList[i+2].Datum))
-                        {
-                            i++;
-                            totalVolym += entryList[i+1].Volym;
-                            totalKurs = (totalKurs + entryList[i+1].Kurs) / 2;
-                        }
-                    }
-                    //make the entry a entryOverTime instance and add it to the list
-                    entryOverTimeList.Add(new EntryOverTime(entryList[i].Datum, interval, totalKurs, totalVolym));
+                    totalVolym += entryList[i + 1].Volym;
+                    totalKurs = totalKurs + entryList[i + 1].Kurs;
+                    i++;
+                    nItemsSameDay++;
                 }
+
+                //make the entry a entryOverTime instance and add it to the list
+                entryOverTimeList.Add(new EntryOverTime(entryList[i].Datum, interval, (totalKurs / nItemsSameDay), totalVolym));
             }
             return entryOverTimeList;
         }

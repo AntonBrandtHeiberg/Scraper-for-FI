@@ -63,7 +63,9 @@ def analyzeDataFrame(df):
     min_index = df['Difference_StockVIndex'].idxmin()
     maxVal = df['Difference_StockVIndex'].max(axis=0)
     max_index = df['Difference_StockVIndex'].idxmax()
-    print(minVal, " at: " ,min_index,  " and max val: " ,maxVal, " at: " ,max_index,)
+    dateMin = df['Date'][min_index]
+    dateMax = df['Date'][max_index]
+    print(minVal, " at: " ,dateMin,  " and max val: " ,maxVal, " at: " ,dateMax,)
     
     
 def convertDateToString(i, dataFrame): #Takes one of the dataframes (that are indexed by date, which complicates things...

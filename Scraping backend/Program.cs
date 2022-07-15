@@ -3,6 +3,7 @@ using System.Net.Http;
 using HtmlAgilityPack;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 
 namespace Scraping_HTMLAgilityPack
 {
@@ -48,7 +49,7 @@ namespace Scraping_HTMLAgilityPack
 
             string företag = "nordea";
             DateTime startDate = StringToDate("2021 09 08");
-            DateTime endDate = StringToDate("2021 09 09 ");
+            DateTime endDate = StringToDate("2021 09 10 ");
 
             //make sure startdate occurs before or on the same day as endDate
             if (startDate > endDate)
@@ -141,15 +142,42 @@ namespace Scraping_HTMLAgilityPack
             List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, interval);
 
             //print allEntryOverTime
-            Console.WriteLine("EntryOverTime Objects: ");
+            Console.WriteLine("\nEntryOverTime Objects: ");
             foreach (EntryOverTime entry in entryOverTimeList)
             {
                 Console.WriteLine(entry);
-                Console.WriteLine("---");
             }
 
             watch.Stop();
-            Console.WriteLine(watch.ElapsedMilliseconds);
+            Console.WriteLine(String.Format("\n-> Tid: {0} sekunder", (double) watch.ElapsedMilliseconds / 1000));
+
+            //print result from python script
+            Console.WriteLine(pythonScript());
+        }
+
+        public static string pythonScript()
+        {
+            //run python with windows cmd
+            var psi = new ProcessStartInfo();
+            psi.FileName = "cmd.exe";
+            string myPath = @"""C:\Users\Anton Brandt Heiberg\Documents\Python\yFinance.py""";
+            psi.Arguments = @"/c " + myPath; //är detta två olika argument eller samma? Allt är ju en sträng så det är den strängen som är argumentet
+            //psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+
+            //variables for debugging
+            var errors = "";
+            var result = "";
+            using (var process = Process.Start(psi))
+            {
+                errors = process.StandardError.ReadToEnd();
+                result = process.StandardOutput.ReadToEnd();
+            }
+            
+            return result;
         }
 
         /// <summary>
@@ -174,13 +202,13 @@ namespace Scraping_HTMLAgilityPack
                 while (i + 1 < entryList.Count && entryList[i].Datum.Equals(entryList[i + 1].Datum))
                 {
                     totalVolym += entryList[i + 1].Volym;
-                    totalKurs = totalKurs + entryList[i + 1].Kurs;
+                    totalKurs += entryList[i + 1].Kurs;
                     i++;
                     nItemsSameDay++;
                 }
 
                 //make the entry a entryOverTime instance and add it to the list
-                entryOverTimeList.Add(new EntryOverTime(entryList[i].Datum, interval, (totalKurs / nItemsSameDay), totalVolym));
+                entryOverTimeList.Add(new EntryOverTime(entryList[i].Datum, interval, (totalKurs / nItemsSameDay), totalVolym, 1.4));
             }
             return entryOverTimeList;
         }

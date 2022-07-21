@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,18 +7,26 @@ namespace Scraping_HTMLAgilityPack
     class EntryOverTime
     {
         private DateTime startDate;
-        private string dateInterval;
-        private DateTime endDate;
+        private int[] dateInterval;
 
         private double kurs;
         private double volym;
+        private double indexOMX;
+        private double totalVärde;
 
-        public EntryOverTime(DateTime startDate, string dateInterval, double kurs, double volym)
+        public EntryOverTime(double totalVärde, DateTime startDate, int[] dateInterval, double kurs, double volym, double indexOMX)
         {
+            this.totalVärde = totalVärde;
             this.startDate = startDate;
-            this.dateInterval = dateInterval;
+            this.dateInterval = dateInterval; //do I really need dateInterval...?
             this.kurs = kurs;
             this.volym = volym;
+            this.indexOMX = indexOMX;
+        }
+        public double TotalVärde
+        {
+            get { return totalVärde; }
+            set { this.totalVärde = TotalVärde; }
         }
 
         public double Kurs
@@ -33,13 +41,19 @@ namespace Scraping_HTMLAgilityPack
             set { this.volym = Volym; }
         }
 
+        public double IndexOMX
+        {
+            get { return indexOMX; }
+            set { this.indexOMX = IndexOMX; }
+        }
+
         public DateTime StartDate
         {
             get { return startDate; }
             set { this.startDate = StartDate; }
         }
 
-        public string DateInterval
+        public int[] DateInterval
         {
             get { return dateInterval; }
             set { this.dateInterval = DateInterval; }
@@ -47,13 +61,11 @@ namespace Scraping_HTMLAgilityPack
 
         public DateTime EndDate
         {
-            get { return startDate.AddYears(int.Parse(dateInterval.Split(' ')[0])).AddMonths(int.Parse(dateInterval.Split(' ')[1])).AddDays(int.Parse(dateInterval.Split(' ')[2])); }
-            set { this.endDate = EndDate; }
+            get { return Program.AddInterval(startDate, dateInterval); }
         }
         public override string ToString()
         {
-            string[] interval = dateInterval.Split(' ');
-            return "datum: " + StartDate.ToShortDateString() + ", interval: " + interval[0] + "-" + interval[1] + "-" + interval[2] + ", end date: " + EndDate.ToShortDateString() + ", genomsnittskurs: " + kurs + ", totalvolym: " + String.Format("{0:# ###}", volym);
+            return String.Format("Datum: {0} | Totalt Värde: {1:# ###.##}kr | Genomsnittskurs: {2:n}kr | Totalvolym: {3:# ###} | OMX Index: {4:n}", StartDate.ToShortDateString(), TotalVärde, Kurs, Volym, IndexOMX);
         }
     }
 }

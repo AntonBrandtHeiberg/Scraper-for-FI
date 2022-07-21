@@ -19,6 +19,11 @@ namespace Scraping_HTMLAgilityPack
             this.indexOMX = indexOMX;
         }
 
+        public double TotalVärde
+        {
+            get { return (double) Kurs*Volym; }
+        }
+
         public double Kurs
         {
             get { return kurs; }
@@ -45,7 +50,7 @@ namespace Scraping_HTMLAgilityPack
 
         public override string ToString()
         {
-            return "datum: " + datum.ToShortDateString() + ", volym: " + String.Format("{0:# ###}", volym) + ", kurs: " + kurs + ", indexOMX: " + indexOMX;
+            return String.Format("Datum: {0} | Värde: {1:# ###.##}kr | Kurs: {2:n}kr| Volym: {3:# ###} | OMX Index: {4:N}", Datum.ToShortDateString(), TotalVärde, Kurs, Volym, IndexOMX);
         }
     }
 }

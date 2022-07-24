@@ -9,7 +9,7 @@ namespace Scraping_HTMLAgilityPack
 {
     class Program
     {
-        //map with köptyper to make sure the equals function functions correctly
+        //map with köptyper to make sure .Equals functions correctly
         public static Dictionary<string, string> köptyper = new Dictionary<string, string>
             {
                 {"förvärv", "F&#246;rv&#228;rv" },
@@ -17,11 +17,27 @@ namespace Scraping_HTMLAgilityPack
                 {"tilldelning", "Tilldelning" }
             };
 
+        //all standard companies relevant to the study
+        public static Dictionary<string, string> stocks = new Dictionary<string, string>
+        {
+            { "Pandox", "PNDX-B.ST" },
+            { "Volvo", "VOLV-B.ST" },
+            { "Electrolux", "ELUX-B.ST" },
+            { "Ericsson", "ERIC-B.ST" },
+            { "H&M", "HM-B.ST" },
+            { "SEB", "SEB-A.ST" },
+            { "Swedbank", "SWED-A.ST" },
+            { "Tele2", "TEL2-B.ST" },
+            { "SKF", "SKF-B.ST" },
+            { "Sandvik", "SAND.ST" },
+            { "Skanska", "SKA-B.ST" }
+        };
+
         //map to help with traversing the tablerows
         //pos 0 är datum
         //pos 2 är namn
         //pos 5 är avryttning eller tilldelning eller förvärv
-        //pos 10 är antal, ex: 7 000 har Html 7&#160;000, dvs: "&#160;" representerar multiplikation med 1000 verkar det som
+        //pos 10 är antal, ex: 7 000 har HTML 7&#160;000, dvs: "&#160;" representerar multiplikation med 1000 verkar det som
         //pos 12 är kurs
         //pos 13 är valuta
         public static Dictionary<string, int> tableRow = new Dictionary<string, int>
@@ -36,14 +52,11 @@ namespace Scraping_HTMLAgilityPack
                 { "status", 14 }
             };
 
+        //Program starts here
         public static void Main(string[] args)
         {
-            //here are all the important variables that dictate the rest of the code
-            //all standard companies relevant to the study
-            String[] företaglista = { "volvo", "electrolux", "ericsson", "H&M", "seb", "swedbank", "tele2", "skf", "skanska", "sandvik" };
-
             //ska Entry och EntryOverTime ha företag, köptyp, valuta och status som attribut?
-            Scrape_I_Fi("2021 09 08", "2021 09 10", new int[] { 0, 0, 2 }, "nordea", "förvärv", "sek", "-");
+            Scrape_I_Fi("2021 07 24", "2022 07 24", new int[] { 0, 1, 0 }, "Pandox", "förvärv", "-", "-");
         }
 
         /// <summary>
@@ -57,6 +70,9 @@ namespace Scraping_HTMLAgilityPack
         /// </returns>
         public static void Scrape_I_Fi(string stringStartDate, string stringEndDate, int[] interval, string företag, string köptyp, string valuta, string status)
         {
+            //stopwatch for debugging purposes
+            Stopwatch watch = Stopwatch.StartNew();
+
             DateTime startDate = StringToDate(stringStartDate);
             DateTime endDate = StringToDate(stringEndDate);
 
@@ -79,13 +95,12 @@ namespace Scraping_HTMLAgilityPack
             }
 
             Console.WriteLine(string.Format("--- {0} ---", företag));
-            Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
 
-            //sidor is the maximum amount of pages for that particular company and I get that int by scraping for the last available page
+            //sidor is the maximum amount of pages for that particular company
             int sidor = int.Parse(new HtmlAgilityPack.HtmlWeb().Load("https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
-                    + företag +
+                    + företag.ToLower() +
                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=1"
-                    ).DocumentNode.SelectSingleNode("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul/li[14]/a").InnerText.Substring(1));
+                    ).DocumentNode.SelectSingleNode("html/body/div[1]/div/div/div[2]/div/div/div[2]/span[3]").InnerText);
 
             //check the if statment with publiceringsdatum for more context
             bool passedEndDate = false;
@@ -96,15 +111,20 @@ namespace Scraping_HTMLAgilityPack
             //start going through the pages
             for (int i = 1; i <= sidor && !passedEndDate; i++)
             {
+                Stopwatch entryWatch = Stopwatch.StartNew();
+
                 //url updates with the side page
                 string url = "https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
-                    + företag +
+                    + företag.ToLower() +
                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=" +
                     i;
 
                 //Time to surf the interwebs!!
                 HtmlWeb web = new HtmlAgilityPack.HtmlWeb();
                 HtmlDocument doc = web.Load(url);
+                entryWatch.Stop();
+                Console.WriteLine(string.Format("\n->Entry Page {0}: {1}", i, (double) entryWatch.ElapsedMilliseconds / 1000));
+                entryWatch.Restart();
 
                 //Find every tablerow (tr) node via this xPath expression
                 foreach (var item in doc.DocumentNode.SelectNodes("/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/table[1]/tbody[1]/tr"))
@@ -120,7 +140,7 @@ namespace Scraping_HTMLAgilityPack
                     }
 
                     //check if we need to go a page further, we don't need to go further if publiceringsdatum is 2 months after what we were looking for!
-                    //2 months is ridiculous, I know but it happens sometimes appearently!
+                    //2 months is ridiculous, I know but it happens sometimes appearently! 1400000 is two months in hours
                     DateTime publiceringsDatum = StringToDate(table[tableRow["publiceringsdatum"]].Replace("-", " "));
                     if (publiceringsDatum < endDate && endDate.Subtract(publiceringsDatum) < new TimeSpan(1400000, 0, 0))
                     {
@@ -162,11 +182,11 @@ namespace Scraping_HTMLAgilityPack
                             //okay this looks strange but it's fine, trust me! It creates a new entry and adds it to the entrylist but how I get the attributes is a bit cheesy
                             //colList is the tablerow (tr) and it contains lots of rows of table data (td). Every tabledata is a string
                             //tableRow is basically a map that allows me to easily get everything I want from the tr. tableRow["name"] gives an int.
-                            //&#160 needs to be removed because that represents a space
+                            //&#160 needs to be removed because that represents a space (" ")
                             double kurs = Convert.ToDouble(table[tableRow["kurs"]].Replace("&#160;", String.Empty));
                             double volym = Convert.ToDouble(table[tableRow["volym"]].Replace("&#160;", String.Empty));
 
-                            Entry entry = new Entry(kurs, volym, date, 1.4); //1.4 will in the future be the result from the python script instead
+                            Entry entry = new Entry(kurs, volym, date, 1.4); //1.4 is a placeholder
                             entryList.Add(entry);
                         }
                     }
@@ -186,7 +206,7 @@ namespace Scraping_HTMLAgilityPack
             //loop through entrylist and mash entries together according to dateInterval
             List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, startDate, interval);
 
-            //print allEntryOverTime
+            //print EntryOverTimeList
             Console.WriteLine("\nEntryOverTime Objects: ");
             foreach (EntryOverTime entry in entryOverTimeList)
             {
@@ -194,14 +214,14 @@ namespace Scraping_HTMLAgilityPack
             }
 
             watch.Stop();
-            Console.WriteLine(String.Format("\n-> Tid: {0} sekunder", (double)watch.ElapsedMilliseconds / 1000));
-
+            Console.WriteLine(String.Format("\n-> Scraping Entries: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
             watch.Restart();
+
             //print result from python script
-            Console.WriteLine("\n" + PythonScript());
+            Console.WriteLine("\n" + PythonScript(företag, startDate));
 
             watch.Stop();
-            Console.WriteLine(String.Format("-> Tid: {0} sekunder", (double)watch.ElapsedMilliseconds / 1000));
+            Console.WriteLine(String.Format("-> Call Python: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
         }
 
         /// <summary>
@@ -210,7 +230,7 @@ namespace Scraping_HTMLAgilityPack
         /// <returns>
         /// Lowest and highest index compared to OMX and the respective <see langword="Date"/> during given timeframe for the <paramref name="stockName"/>
         /// </returns>
-        public static string PythonScript()//DateTime startDate, DateTime endDate, string stockName)
+        public static string PythonScript(string företag, DateTime startDate)//DateTime startDate, DateTime endDate, string stockName)
         {
             //make sure to have enviornmental variables PYTHONPATH and PATH set
             string pythonScriptPath = @"""C:\Users\Anton Brandt Heiberg\Documents\Python\yFinance.py""";
@@ -223,9 +243,9 @@ namespace Scraping_HTMLAgilityPack
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                Arguments = @"/c " + pythonScriptPath
-                //psi.Arguments = script; //Set the argument(s) to the script; If more are required then add here
-        };
+                Arguments = "/c " + pythonScriptPath + " " + stocks[företag] + " " + startDate.ToString("yyyy-MM-dd")
+                //Arguments = företag; //Set the argument(s) to the script; If more are required then add here
+            };
             
             //variables for debugging
             string errors;
@@ -264,7 +284,7 @@ namespace Scraping_HTMLAgilityPack
             {
                 //check if the next item is within the right timeframe
                 //(referenceDate <= entryList[i].Datum && entryList[i].Datum <= AddInterval(referenceDate, interval)
-                while (entryList[i].Datum  > referenceDate || entryList[i].Datum > AddInterval(referenceDate, interval))
+                while (entryList[i].Datum > referenceDate || entryList[i].Datum > AddInterval(referenceDate, interval))
                 {
                     referenceDate = AddInterval(referenceDate, interval);
                 }
@@ -303,7 +323,7 @@ namespace Scraping_HTMLAgilityPack
         /// </returns>
         public static DateTime AddInterval(DateTime date, int[] interval, int n = 1)
         {
-            //base case
+            //adding 0 via AddYears, AddMonths or AddDays will throw error so these statements are there for that reason.
             if(interval[0] != 0)
             {
                 date = date.AddYears(interval[0] * n);

@@ -1,9 +1,8 @@
 #%config Completer.use_jedi = False
-
+import sys
 from ast import arg
 import yfinance as yf
 import pandas as pd
-import sys
 from datetime import date
 lengthOfMonth = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -62,8 +61,12 @@ def analyzeDataFrame(df):
     max_index = df['Difference_StockVIndex'].idxmax()
     dateMin = df['Date'][min_index]
     dateMax = df['Date'][max_index]
-    print(minVal, " at: " ,timeElapsed(df['Date'][0], dateMin),
-     "days from start and max val: " ,maxVal, " at: " ,timeElapsed(df['Date'][0], dateMax),)
+    #Prints the minimum development of the stock compared to index
+    #Prints the amount of days passed for the min point
+    #Prints the max development of the stock compared to index
+    #Prints the amount of days passed for the max point
+    print(minVal, "\n" ,timeElapsed(df['Date'][0], dateMin),
+     "\n" ,maxVal, "\n" ,timeElapsed(df['Date'][0], dateMax),)
     
 def timeElapsed(firstDate, endDate): #Shows the amount of time elapsed in days
     startSplit = firstDate.split("-")

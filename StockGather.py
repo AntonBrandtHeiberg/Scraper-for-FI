@@ -73,7 +73,8 @@ def timeElapsed(firstDate, endDate): #Shows the amount of time elapsed in days
     endSplit = endDate.split("-")
     monthStart = int(startSplit[1])
     monthEnd = int(endSplit[1])
-    if(monthStart == monthEnd): #if same month then only subtract the days
+
+    if(monthStart == monthEnd and int(endSplit[0]) != int(startSplit[0])): #if same month (and not different year) then only subtract the days
         return int(endSplit[2]) - int(startSplit[2])
 
     dateDifference = lengthOfMonth[monthStart]-int(startSplit[2]) #gets the number of days remaining of the month 
@@ -99,7 +100,7 @@ if int(sys.argv[2].split("-")[1]) % 4 == 0:
 if sys.argv.count == 4:
     getDate(sys.argv[1], sys.argv[2], sys.argv[3], 12)
 else:
-    getDate(sys.argv[1], sys.argv[2], dateInterval= 12) #Argument 1 is the stock to investigate
+    getDate(sys.argv[1], sys.argv[2], dateInterval= 1) #Argument 1 is the stock to investigate
     #Argument 2 is the start-date 
     #Argument 3 is the end-date
 

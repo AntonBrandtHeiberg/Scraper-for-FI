@@ -5,10 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
 
-namespace Scraping_HTMLAgilityPack
+namespace InsiderScraper
 {
     class Program
     {
+        //make sure to have enviornmental variables PYTHONPATH and PATH set
+        public static string pythonScriptPath = @"""C:\Users\anton\Documents\PythonScripts""";
+
         //map with köptyper to make sure .Equals functions correctly
         public static Dictionary<string, string> köptyper = new Dictionary<string, string>
             {
@@ -55,8 +58,20 @@ namespace Scraping_HTMLAgilityPack
         //Program starts here
         public static void Main(string[] args)
         {
-            //ska Entry och EntryOverTime ha företag, köptyp, valuta och status som attribut?
-            Scrape_I_Fi("2021 07 24", "2022 07 24", new int[] { 0, 1, 0 }, "Pandox", "förvärv", "-", "-");
+            Stopwatch watch = Stopwatch.StartNew();
+            string företag = "Volvo";
+
+            List<EntryOverTime> entryOverTimes = Scrape_I_Fi("2022 01 01", "2022 05 01", new int[] { 0, 0, 1 }, företag, "förvärv", "SEK");
+
+            StockForecast sf =  new StockForecast(entryOverTimes, företag);
+            //Console.WriteLine(sf);
+            Trader trader = new Trader(sf);
+            trader.Simulation(entryOverTimes[0]);
+            Console.WriteLine(trader);
+            
+            watch.Stop();
+            Console.WriteLine(String.Format("\n-> Total Process: {0} seconds", (double)watch.ElapsedMilliseconds / 1000));
+            //Console.ReadLine();
         }
 
         /// <summary>
@@ -68,11 +83,8 @@ namespace Scraping_HTMLAgilityPack
         /// <returns>
         /// 
         /// </returns>
-        public static void Scrape_I_Fi(string stringStartDate, string stringEndDate, int[] interval, string företag, string köptyp, string valuta, string status)
+        public static List<EntryOverTime> Scrape_I_Fi(string stringStartDate, string stringEndDate, int[] interval, string företag, string köptyp, string valuta)     
         {
-            //stopwatch for debugging purposes
-            Stopwatch watch = Stopwatch.StartNew();
-
             DateTime startDate = StringToDate(stringStartDate);
             DateTime endDate = StringToDate(stringEndDate);
 
@@ -96,11 +108,11 @@ namespace Scraping_HTMLAgilityPack
 
             Console.WriteLine(string.Format("--- {0} ---", företag));
 
-            //sidor is the maximum amount of pages for that particular company
+            //sidor is the maximum amount of pages for that particular company FÖRJÄVLA KOMMENTAR
             int sidor = int.Parse(new HtmlAgilityPack.HtmlWeb().Load("https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
                     + företag.ToLower() +
                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=1"
-                    ).DocumentNode.SelectSingleNode("html/body/div[1]/div/div/div[2]/div/div/div[2]/span[3]").InnerText);
+                    ).DocumentNode.SelectSingleNode("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul/li[14]").InnerText.Replace("s", String.Empty));
 
             //check the if statment with publiceringsdatum for more context
             bool passedEndDate = false;
@@ -109,7 +121,7 @@ namespace Scraping_HTMLAgilityPack
             List<Entry> entryList = new List<Entry>();
 
             //start going through the pages
-            for (int i = 1; i <= sidor && !passedEndDate; i++)
+            for (int i = 1; i < sidor; i++) //&& !passedEndDate; i++)
             {
                 Stopwatch entryWatch = Stopwatch.StartNew();
 
@@ -123,7 +135,7 @@ namespace Scraping_HTMLAgilityPack
                 HtmlWeb web = new HtmlAgilityPack.HtmlWeb();
                 HtmlDocument doc = web.Load(url);
                 entryWatch.Stop();
-                Console.WriteLine(string.Format("\n->Entry Page {0}: {1}", i, (double) entryWatch.ElapsedMilliseconds / 1000));
+                //Console.WriteLine(string.Format("\n->Entry Page {0}: {1}", i, (double)entryWatch.ElapsedMilliseconds / 1000));
                 entryWatch.Restart();
 
                 //Find every tablerow (tr) node via this xPath expression
@@ -155,6 +167,12 @@ namespace Scraping_HTMLAgilityPack
                         //following if statements make sure every requierment is met
                         bool pass = true;
 
+                        //we don't want the entry if kurs is 0
+                        if (table[tableRow["kurs"]].Equals("0,00"))
+                        {
+                            pass = false;
+                        }
+
                         //check köptyp
                         if (!table[tableRow["köptyp"]].Equals(köptyper[köptyp.ToLower()]) && !köptyp.Equals("-"))
                         {
@@ -172,7 +190,8 @@ namespace Scraping_HTMLAgilityPack
                         //Conditional (ternary) expression: boolean ? true expression : false expression;
                         string entryStatus = table[tableRow["status"]].ToLower().Equals("") ? "-" : table[tableRow["status"]];
 
-                        if (!entryStatus.Equals(status) && !entryStatus.Equals("-"))
+                        //status can't be Reviderad
+                        if (entryStatus.Equals("Reviderad"))
                         {
                             pass = false;
                         }
@@ -186,7 +205,7 @@ namespace Scraping_HTMLAgilityPack
                             double kurs = Convert.ToDouble(table[tableRow["kurs"]].Replace("&#160;", String.Empty));
                             double volym = Convert.ToDouble(table[tableRow["volym"]].Replace("&#160;", String.Empty));
 
-                            Entry entry = new Entry(kurs, volym, date, 1.4); //1.4 is a placeholder
+                            Entry entry = new Entry(kurs, volym, date, företag); //1.4 is a placeholder
                             entryList.Add(entry);
                         }
                     }
@@ -204,7 +223,7 @@ namespace Scraping_HTMLAgilityPack
             }
 
             //loop through entrylist and mash entries together according to dateInterval
-            List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, startDate, interval);
+            List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, startDate, interval, företag);
 
             //print EntryOverTimeList
             Console.WriteLine("\nEntryOverTime Objects: ");
@@ -212,16 +231,7 @@ namespace Scraping_HTMLAgilityPack
             {
                 Console.WriteLine(entry);
             }
-
-            watch.Stop();
-            Console.WriteLine(String.Format("\n-> Scraping Entries: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
-            watch.Restart();
-
-            //print result from python script
-            Console.WriteLine("\n" + PythonScript(företag, startDate));
-
-            watch.Stop();
-            Console.WriteLine(String.Format("-> Call Python: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
+            return entryOverTimeList;
         }
 
         /// <summary>
@@ -230,11 +240,8 @@ namespace Scraping_HTMLAgilityPack
         /// <returns>
         /// Lowest and highest index compared to OMX and the respective <see langword="Date"/> during given timeframe for the <paramref name="stockName"/>
         /// </returns>
-        public static string PythonScript(string företag, DateTime startDate)//DateTime startDate, DateTime endDate, string stockName)
+        public static List<Double> PythonCaller(string företag, string dates, string scriptName)
         {
-            //make sure to have enviornmental variables PYTHONPATH and PATH set
-            string pythonScriptPath = @"""C:\Users\Anton Brandt Heiberg\Documents\Python\yFinance.py""";
-
             //run python with Windows Command Prompt
             ProcessStartInfo psi = new ProcessStartInfo
             {
@@ -243,10 +250,12 @@ namespace Scraping_HTMLAgilityPack
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                Arguments = "/c " + pythonScriptPath + " " + stocks[företag] + " " + startDate.ToString("yyyy-MM-dd")
+                Arguments = "/c " + System.IO.Path.Combine(pythonScriptPath, scriptName) + " " + stocks[företag] + " " + dates
                 //Arguments = företag; //Set the argument(s) to the script; If more are required then add here
             };
-            
+
+            string indata = stocks[företag] + " " + dates;
+
             //variables for debugging
             string errors;
             string result;
@@ -256,8 +265,27 @@ namespace Scraping_HTMLAgilityPack
                 errors = process.StandardError.ReadToEnd();
                 result = process.StandardOutput.ReadToEnd();
             }
-            
-            return result;
+
+            //result = result.Replace("\r", String.Empty).Replace(" ", String.Empty).Replace(".", ",");
+
+            //string[] values = { result.Split("\n")[2], result.Split("\n")[3], result.Split("\n")[4], result.Split("\n")[5] };
+            return Trim(result);
+        }
+
+        static List<double> Trim(string input)
+        {
+            List<double> output = new List<double>();
+            double result;
+
+            foreach(string line in input.Split("\n"))
+            {
+                if(Double.TryParse(line.Replace("\r", String.Empty).Replace(".", ","), out result))
+                {
+                    output.Add(result);
+                }
+            }
+
+            return output;
         }
 
         /// <summary>
@@ -266,7 +294,7 @@ namespace Scraping_HTMLAgilityPack
         /// <returns>
         /// A new <see langword="List"/> of <see langword="EntryOverTime"/> instances
         /// </returns>
-        public static List<EntryOverTime> EntryMerger(List<Entry> entryList, DateTime startDate, int[] interval)
+        public static List<EntryOverTime> EntryMerger(List<Entry> entryList, DateTime startDate, int[] interval, string företag)
         {
             List<EntryOverTime> entryOverTimeList = new List<EntryOverTime>();
 
@@ -308,10 +336,10 @@ namespace Scraping_HTMLAgilityPack
                 }
 
                 //make the entry a entryOverTime instance and add it to the list
-                entryOverTimeList.Add(new EntryOverTime(totalVärde, referenceDate, interval, (totalKurs / nItems), totalVolym, 1.4));
+                entryOverTimeList.Add(new EntryOverTime(totalVärde, referenceDate, interval, (totalKurs / nItems), totalVolym, företag));
                 referenceDate = AddInterval(referenceDate, interval);
             }
-            
+
             return entryOverTimeList;
         }
 
@@ -324,15 +352,15 @@ namespace Scraping_HTMLAgilityPack
         public static DateTime AddInterval(DateTime date, int[] interval, int n = 1)
         {
             //adding 0 via AddYears, AddMonths or AddDays will throw error so these statements are there for that reason.
-            if(interval[0] != 0)
+            if (interval[0] != 0)
             {
                 date = date.AddYears(interval[0] * n);
             }
-            if(interval[1] != 0)
+            if (interval[1] != 0)
             {
                 date = date.AddMonths(interval[1] * n);
             }
-            if(interval[2] != 0)
+            if (interval[2] != 0)
             {
                 date = date.AddDays(interval[2] * n);
             }

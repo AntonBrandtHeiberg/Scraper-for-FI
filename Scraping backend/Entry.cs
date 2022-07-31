@@ -2,21 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Scraping_HTMLAgilityPack
+namespace InsiderScraper
 {
     class Entry
     {
         private double kurs;
         private double volym;
         private DateTime datum;
-        private double indexOMX;
+        private readonly string företag;
 
-        public Entry(double kurs, double volym, DateTime datum, double indexOMX)
+        public Entry(double kurs, double volym, DateTime datum, string företag)
         {
             this.kurs = kurs;
             this.volym = volym;
             this.datum = datum;
-            this.indexOMX = indexOMX;
+            this.företag = företag;
         }
 
         public double TotalVärde
@@ -42,15 +42,14 @@ namespace Scraping_HTMLAgilityPack
             set { this.datum = Datum; }
         }
 
-        public double IndexOMX
+        public string Företag
         {
-            get { return indexOMX; }
-            set { this.indexOMX = IndexOMX; }
+            get { return företag; }
         }
 
         public override string ToString()
         {
-            return String.Format("Datum: {0} | Värde: {1:# ###.##}kr | Kurs: {2:n}kr| Volym: {3:# ###} | OMX Index: {4:N}", Datum.ToShortDateString(), TotalVärde, Kurs, Volym, IndexOMX);
+            return String.Format("Datum: {0} | Värde: {1:### ### ###.##}kr | Kurs: {2:n}kr| Volym: {3:# ###} | Company Name: {4:N}", Datum.ToShortDateString(), TotalVärde, Kurs, Volym, företag);
         }
     }
 }

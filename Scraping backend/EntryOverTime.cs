@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Scraping_HTMLAgilityPack
+namespace InsiderScraper
 {
     class EntryOverTime
     {
@@ -11,17 +11,17 @@ namespace Scraping_HTMLAgilityPack
 
         private double kurs;
         private double volym;
-        private double indexOMX;
+        private string företag;
         private double totalVärde;
 
-        public EntryOverTime(double totalVärde, DateTime startDate, int[] dateInterval, double kurs, double volym, double indexOMX)
+        public EntryOverTime(double totalVärde, DateTime startDate, int[] dateInterval, double kurs, double volym, string företag)
         {
             this.totalVärde = totalVärde;
             this.startDate = startDate;
             this.dateInterval = dateInterval; //do I really need dateInterval...?
             this.kurs = kurs;
             this.volym = volym;
-            this.indexOMX = indexOMX;
+            this.företag = företag;
         }
         public double TotalVärde
         {
@@ -41,10 +41,9 @@ namespace Scraping_HTMLAgilityPack
             set { this.volym = Volym; }
         }
 
-        public double IndexOMX
+        public string Företag
         {
-            get { return indexOMX; }
-            set { this.indexOMX = IndexOMX; }
+            get { return företag; }
         }
 
         public DateTime StartDate
@@ -65,7 +64,7 @@ namespace Scraping_HTMLAgilityPack
         }
         public override string ToString()
         {
-            return String.Format("Datum: {0} | Totalt Värde: {1:# ###.##}kr | Genomsnittskurs: {2:n}kr | Totalvolym: {3:# ###} | OMX Index: {4:n}", StartDate.ToShortDateString(), TotalVärde, Kurs, Volym, IndexOMX);
+            return String.Format("Datum: {0} | Totalt Värde: {1:### ### ###.##}kr | Genomsnittskurs: {2:n}kr | Totalvolym: {3:# ###} | Company Name: {4:n}", StartDate.ToShortDateString(), TotalVärde, Kurs, Volym, Företag);
         }
     }
 }

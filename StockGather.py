@@ -1,6 +1,5 @@
 
 
-#%config Completer.use_jedi = False
 import sys
 from ast import arg
 import yfinance as yf
@@ -10,8 +9,7 @@ import datetime
 startStockPrice = 0
 startIndexVal = 0
 currentDate = str(datetime.date.today()) #sets the current date
-#Returns the dates
-#StartDate is an array of dates
+
 def getDate(stock, start, dateInterval = 1):
     startDates = start.split(" ")
     stockData = yf.download(stock, start = startDates[0], end = currentDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/

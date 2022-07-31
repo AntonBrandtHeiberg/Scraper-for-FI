@@ -8,4 +8,4 @@ def getStockData(stock, startDate, endDate):
     return stockData
     
 result = getStockData(sys.argv[1], sys.argv[2], sys.argv[3]) #Parameters are stock, startdate and enddate
-result['Close'].values[0]
+print(result['Close'].values[0])

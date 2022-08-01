@@ -13,10 +13,12 @@ def getDate(stock, start, days, percentageInc):
     stockData = yf.download(stock, start = startDates[0], end = currentDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
     #and the start/end date is "yyyy-mm-dd"
     indexData = yf.download('^OMXSPI', start = startDates[0], end = currentDate)
+    maxDays = int(days)
+    percent = float(percentageInc)
     for startD in startDates:
          st = datetime.datetime.strptime(startD, '%Y-%m-%d').date() #Converts a date yyyy-mm-dd to datetime
          end = st.replace(st.year + 1) 
-         stockVIndex = stockDevelopment(st, end, stockData, indexData, days, percentageInc) #Returns a triplet of values 
+         stockVIndex = stockDevelopment(st, end, stockData, indexData, maxDays, percent) #Returns a triplet of values 
             #with stockPer, indexPer and number of days passed
          printVals(stockVIndex)   
         

@@ -3,6 +3,8 @@ from ast import arg
 import yfinance as yf
 import pandas as pd
 import datetime
+from dateutil.relativedelta import relativedelta
+
     
 startStockPrice = 0
 startIndexVal = 0
@@ -13,7 +15,6 @@ def getDate(stock, start, dateInterval = 1):
     stockData = yf.download(stock, start = startDates[0], end = currentDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
     #and the start/end date is "yyyy-mm-dd"
     indexData = yf.download('^OMXSPI', start = startDates[0], end = currentDate)
-    print(start)
     
     startStockPrice = stockData['Close'].values[0]
     startIndexVal = indexData['Close'].values[0]
@@ -24,7 +25,7 @@ def getDate(stock, start, dateInterval = 1):
     index = 0
     for startD in startDates:
          st = datetime.datetime.strptime(startD, '%Y-%m-%d').date() #Converts a date yyyy-mm-dd to datetime
-         end = st.replace(st.year + 1) 
+         end = st + relativedelta(months=3)
          result = stockDevelopment(st, end, stockData, indexData, dateInterval)#creating a dataframe with stock-index development
          analyzeDataFrame(result, df, index)
          index += 1
@@ -46,7 +47,7 @@ def stockDevelopment(startDate, endDate, stockData, indexData, interval = 5):
         
         stockPer = valueChange(csd['Close'].values[nbrOfDays], startStockPrice)
         indexPer = valueChange(xid['Close'].values[nbrOfDays], startIndexVal)
-        df.loc[nbrOfDays] = [nbrOfDays, stockPer, indexPer, (stockPer-indexPer)]
+        df.loc[nbrOfDays] = [nbrOfDays, stockPer, indexPer, (stockPer-indexPer*0.25)]
         nbrOfDays += 1
         
     return df

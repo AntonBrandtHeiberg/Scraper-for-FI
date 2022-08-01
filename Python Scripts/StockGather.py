@@ -4,20 +4,22 @@ import yfinance as yf
 import pandas as pd
 import datetime
 from dateutil.relativedelta import relativedelta
+import DividendsDates
 
-    
-startStockPrice = 0
-startIndexVal = 0
+global startStockPrice
+global startIndexVal
 currentDate = str(datetime.date.today()) #sets the current date
+global dividend
 
-def getDate(stock, start, dateInterval = 1):
+def getStockData(stock, startDate, endDate = currentDate):
+    return yf.download(stock, start = startDate, end = endDate)
+
+def getDate(stock, start):
+
     startDates = start.split("Q")
-    stockData = yf.download(stock, start = startDates[0], end = currentDate) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
+    stockData = getStockData(stock, startDates[0]) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
     #and the start/end date is "yyyy-mm-dd"
     indexData = yf.download('^OMXSPI', start = startDates[0], end = currentDate)
-    
-    startStockPrice = stockData['Close'].values[0]
-    startIndexVal = indexData['Close'].values[0]
     df = pd.DataFrame(
        {
         "MaxDays": [], "MaxPercentage": [], "MinDays":[], "MinPercentage":[]
@@ -25,14 +27,15 @@ def getDate(stock, start, dateInterval = 1):
     index = 0
     for startD in startDates:
          st = datetime.datetime.strptime(startD, '%Y-%m-%d').date() #Converts a date yyyy-mm-dd to datetime
-         end = st + relativedelta(months=3)
-         result = stockDevelopment(st, end, stockData, indexData, dateInterval)#creating a dataframe with stock-index development
+         end = st + relativedelta(months=4)
+         result = stockDevelopment(st, end, stockData, indexData, DividendsDates.returnDividendsDate(stock, startDates[0]))#creating a dataframe with stock-index development
          analyzeDataFrame(result, df, index)
          index += 1
     printValues(df)
     
 #Analyzes the stock-progress 
-def stockDevelopment(startDate, endDate, stockData, indexData, interval = 5):
+def stockDevelopment(startDate, endDate, stockData, indexData, dividendsData):
+    
     df = pd.DataFrame(
         {
         "DaysPassed": [], "StockPercentage": [], "IndexPercentage":[], "Difference_StockVIndex":[]
@@ -41,14 +44,16 @@ def stockDevelopment(startDate, endDate, stockData, indexData, interval = 5):
     xid = indexData.loc[startDate : endDate] #currentindexdata
     startStockPrice = csd['Close'].values[0]
     startIndexVal = xid['Close'].values[0]
+    df.loc[0] = [0, 0, 0, 0]
+    dividend = 0.0
     #adds start-data to frame
-    nbrOfDays = 0
-    for i in range (min(len(csd), len(xid))): 
-        
-        stockPer = valueChange(csd['Close'].values[nbrOfDays], startStockPrice)
-        indexPer = valueChange(xid['Close'].values[nbrOfDays], startIndexVal)
-        df.loc[nbrOfDays] = [nbrOfDays, stockPer, indexPer, (stockPer-indexPer*0.25)]
-        nbrOfDays += 1
+    for i in range (1, (min(len(csd), len(xid)))):
+        if(len(dividendsData) != 0 and str(csd.index[i]).split(" ")[0] == dividendsData[0][0]):
+            dividend += dividendsData[0][1] #if the dividendsdate is the current date then add the value of the dividend to the share value
+            dividendsData.pop(0)
+        stockPer = valueChange(csd['Close'].values[i] + dividend, startStockPrice)
+        indexPer = valueChange(xid['Close'].values[i], startIndexVal)
+        df.loc[i] = [i, stockPer, indexPer, (stockPer-indexPer*0.25)]
         
     return df
     #Returns the % difference from startvalue and currentvalue
@@ -81,6 +86,5 @@ def printValues(df):
 #    lengthOfMonth[2] = 29 #when feb has 29 days 
 stock = "VOLV-B.ST"
 dates = "2022-02-09 2022-03-16 2022-04-25 2022-04-26"
-getDate(sys.argv[1], sys.argv[2], dateInterval= 1) #Argument 1 is the stock to investigate
+getDate(sys.argv[1], sys.argv[2]) #Argument 1 is the stock to investigate
     #Argument 2 is all startdates
-    #Argument 3 is all enddates

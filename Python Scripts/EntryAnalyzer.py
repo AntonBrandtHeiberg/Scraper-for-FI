@@ -35,14 +35,12 @@ def stockDevelopment(startDate, endDate, stockData, indexData, maxDays, maxPerce
     startStockPrice = csd['Close'].values[0]
     startIndexVal = xid['Close'].values[0]
     #adds start-data to frame
-    nbrOfDays = 1
-    for i in range (min(len(csd), len(xid))):
-        stockPer = valueChange(csd['Close'].values[nbrOfDays], startStockPrice)
-        indexPer = valueChange(xid['Close'].values[nbrOfDays], startIndexVal)
-        if(maxDays <= nbrOfDays or (stockPer - indexPer) >= maxPercentage):
-            return (indexPer, nbrOfDays, stockPer)
-        nbrOfDays += 1
-    return (indexPer, nbrOfDays, stockPer) #Returns indexPercentage, days passed for sell and the stockpercentage
+    for i in range (1, min(len(csd), len(xid))):
+        stockPer = valueChange(csd['Close'].values[i], startStockPrice)
+        indexPer = valueChange(xid['Close'].values[i], startIndexVal)
+        if(maxDays <= i or (stockPer - indexPer) >= maxPercentage):
+            return (indexPer, i, stockPer)
+    return (indexPer, i, stockPer) #Returns indexPercentage, days passed for sell and the stockpercentage
         
     #Returns the % difference from startvalue and currentvalue
 def valueChange(currentValue, startValue):

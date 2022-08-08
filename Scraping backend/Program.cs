@@ -33,7 +33,24 @@ namespace InsiderScraper
             { "Tele2", "TEL2-B.ST" },
             { "SKF", "SKF-B.ST" },
             { "Sandvik", "SAND.ST" },
-            { "Skanska", "SKA-B.ST" }
+            { "Skanska", "SKA-B.ST" },
+            { "Skistar", "SKIS-B.ST"}
+        };
+
+        public static List<string> stockList = new List<string>
+        {
+            {"Pandox" },
+            {"Volvo" },
+            {"Electrolux" },
+            {"Ericsson" },
+            {"H&M" },
+            //{"SEB" },
+            {"Swedbank" },
+            {"Tele2" },
+            {"SKF" },
+            {"Sandvik" },
+            {"Skanska" },
+            {"Skistar" }
         };
 
         //map to help with traversing the tablerows
@@ -58,20 +75,43 @@ namespace InsiderScraper
         //Program starts here
         public static void Main(string[] args)
         {
+            //stopwatch for debugging purposes
             Stopwatch watch = Stopwatch.StartNew();
-            string företag = "Volvo";
-
-            List<EntryOverTime> entryOverTimes = Scrape_I_Fi("2022 01 01", "2022 05 01", new int[] { 0, 0, 1 }, företag, "förvärv", "SEK");
-
-            StockForecast sf =  new StockForecast(entryOverTimes, företag);
-            //Console.WriteLine(sf);
-            Trader trader = new Trader(sf);
-            trader.Simulation(entryOverTimes[0]);
-            Console.WriteLine(trader);
             
-            watch.Stop();
-            Console.WriteLine(String.Format("\n-> Total Process: {0} seconds", (double)watch.ElapsedMilliseconds / 1000));
-            //Console.ReadLine();
+            //scrape from FI
+            string startDate = "2018 01 01";
+            string endDate = "2020 12 31";
+
+            string testStartDate = "2021 01 01";
+            string testEndDate = "2022 08 07";
+
+            //one day interval
+            int[] interval = new int[] { 0, 1, 0 };
+
+            //trader list
+            List<Trader> traders = new List<Trader>();
+
+            foreach(string företag in stockList)
+            {
+                List<EntryOverTime> entryOverTimes = Scrape_I_Fi(startDate, endDate, interval, företag, "förvärv", "SEK");
+
+                //Console.WriteLine(String.Format("\n-> Scraping: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
+                watch.Restart();
+
+                //make a trader
+                StockForecast sf = new StockForecast(entryOverTimes, företag);
+                Console.WriteLine("\n" + sf);
+                Trader trader = new Trader(sf);
+
+                //simulation needs to try it's sf on other dates, not the previous tested...
+                trader.Simulation(Scrape_I_Fi(testStartDate, testEndDate, interval, företag, "förvärv", "SEK"));
+                Console.WriteLine(trader.ToString());
+
+                watch.Stop();
+                //Console.WriteLine(String.Format("\n-> Analyzing: {0} seconds", (double) watch.ElapsedMilliseconds / 1000));
+                //Console.ReadLine();
+                traders.Add(trader);
+            }
         }
 
         /// <summary>
@@ -85,6 +125,9 @@ namespace InsiderScraper
         /// </returns>
         public static List<EntryOverTime> Scrape_I_Fi(string stringStartDate, string stringEndDate, int[] interval, string företag, string köptyp, string valuta)     
         {
+            //stopwatch for performance measuring
+            Stopwatch watch =Stopwatch.StartNew();
+
             DateTime startDate = StringToDate(stringStartDate);
             DateTime endDate = StringToDate(stringEndDate);
 
@@ -108,11 +151,17 @@ namespace InsiderScraper
 
             Console.WriteLine(string.Format("--- {0} ---", företag));
 
+            //this is needed because we need to grab the next to last button because it always contains the amount of pages
+            int buttons = new HtmlAgilityPack.HtmlWeb().Load("https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
+                     + företag.ToLower() +
+                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=1"
+                     ).DocumentNode.SelectSingleNode("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul").ChildNodes.Count -1;
+
             //sidor is the maximum amount of pages for that particular company FÖRJÄVLA KOMMENTAR
             int sidor = int.Parse(new HtmlAgilityPack.HtmlWeb().Load("https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
                     + företag.ToLower() +
                     "&PersonILedandeSt%C3%A4llningNamn=&Transaktionsdatum.From=&Transaktionsdatum.To=&Publiceringsdatum.From=&Publiceringsdatum.To=&button=search&Page=1"
-                    ).DocumentNode.SelectSingleNode("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul/li[14]").InnerText.Replace("s", String.Empty));
+                    ).DocumentNode.SelectSingleNode(String.Format("/html/body/div[1]/div/div/div[2]/div/div/div[1]/ul/li[{0}]", buttons)).InnerText.Replace("s", String.Empty));
 
             //check the if statment with publiceringsdatum for more context
             bool passedEndDate = false;
@@ -121,10 +170,8 @@ namespace InsiderScraper
             List<Entry> entryList = new List<Entry>();
 
             //start going through the pages
-            for (int i = 1; i < sidor; i++) //&& !passedEndDate; i++)
+            for (int i = 1; i < sidor && !passedEndDate; i++)
             {
-                Stopwatch entryWatch = Stopwatch.StartNew();
-
                 //url updates with the side page
                 string url = "https://marknadssok.fi.se/Publiceringsklient/sv-SE/Search/Search?SearchFunctionType=Insyn&Utgivare="
                     + företag.ToLower() +
@@ -134,9 +181,6 @@ namespace InsiderScraper
                 //Time to surf the interwebs!!
                 HtmlWeb web = new HtmlAgilityPack.HtmlWeb();
                 HtmlDocument doc = web.Load(url);
-                entryWatch.Stop();
-                //Console.WriteLine(string.Format("\n->Entry Page {0}: {1}", i, (double)entryWatch.ElapsedMilliseconds / 1000));
-                entryWatch.Restart();
 
                 //Find every tablerow (tr) node via this xPath expression
                 foreach (var item in doc.DocumentNode.SelectNodes("/html[1]/body[1]/div[1]/div[1]/div[1]/div[1]/div[1]/table[1]/tbody[1]/tr"))
@@ -152,9 +196,9 @@ namespace InsiderScraper
                     }
 
                     //check if we need to go a page further, we don't need to go further if publiceringsdatum is 2 months after what we were looking for!
-                    //2 months is ridiculous, I know but it happens sometimes appearently! 1400000 is two months in hours
+                    //2 months is ridiculous, I know but it happens sometimes appearently! 1440 is two months in hours
                     DateTime publiceringsDatum = StringToDate(table[tableRow["publiceringsdatum"]].Replace("-", " "));
-                    if (publiceringsDatum < endDate && endDate.Subtract(publiceringsDatum) < new TimeSpan(1400000, 0, 0))
+                    if (publiceringsDatum.AddMonths(2) < endDate)
                     {
                         passedEndDate = true;
                     }
@@ -212,25 +256,30 @@ namespace InsiderScraper
                 }
             }
 
+            if(entryList.Count == 0)
+            {
+                throw new Exception(String.Format(("No entries during {0} to {1}"), startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd")));
+            }
+
             //entrylist needs to be sorted before EntryMerger uses it!
             List<Entry> sortedEntryList = entryList.OrderBy(o => o.Datum).ToList();
 
             //print sortedEntryList
-            Console.WriteLine("Entries: ");
-            foreach (Entry entry in sortedEntryList)
-            {
-                Console.WriteLine(entry);
-            }
+            //Console.WriteLine("Entries: ");
+            //foreach (Entry entry in sortedEntryList)
+            //{
+            //    Console.WriteLine(entry);
+            //}
 
             //loop through entrylist and mash entries together according to dateInterval
             List<EntryOverTime> entryOverTimeList = EntryMerger(sortedEntryList, startDate, interval, företag);
 
             //print EntryOverTimeList
-            Console.WriteLine("\nEntryOverTime Objects: ");
-            foreach (EntryOverTime entry in entryOverTimeList)
-            {
-                Console.WriteLine(entry);
-            }
+            //Console.WriteLine("\nEntryOverTime Objects: ");
+            //foreach (EntryOverTime entry in entryOverTimeList)
+            //{
+            //    Console.WriteLine(entry);
+            //}
             return entryOverTimeList;
         }
 
@@ -240,7 +289,7 @@ namespace InsiderScraper
         /// <returns>
         /// Lowest and highest index compared to OMX and the respective <see langword="Date"/> during given timeframe for the <paramref name="stockName"/>
         /// </returns>
-        public static List<Double> PythonCaller(string företag, string dates, string scriptName)
+        public static List<Double> PythonCaller(string företag, string dates, string scriptName, string optional = "")
         {
             //run python with Windows Command Prompt
             ProcessStartInfo psi = new ProcessStartInfo
@@ -250,11 +299,11 @@ namespace InsiderScraper
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                Arguments = "/c " + System.IO.Path.Combine(pythonScriptPath, scriptName) + " " + stocks[företag] + " " + dates
+                Arguments = "/c " + System.IO.Path.Combine(pythonScriptPath, scriptName) + " " + stocks[företag] + " " + dates + " " + optional.Replace(",", ".")
                 //Arguments = företag; //Set the argument(s) to the script; If more are required then add here
             };
 
-            string indata = stocks[företag] + " " + dates;
+            string indata = stocks[företag] + " " + dates + " " + optional;
 
             //variables for debugging
             string errors;
@@ -271,7 +320,11 @@ namespace InsiderScraper
             //string[] values = { result.Split("\n")[2], result.Split("\n")[3], result.Split("\n")[4], result.Split("\n")[5] };
             return Trim(result);
         }
-
+        /// <summary>
+        /// Parses every possible string row
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         static List<double> Trim(string input)
         {
             List<double> output = new List<double>();

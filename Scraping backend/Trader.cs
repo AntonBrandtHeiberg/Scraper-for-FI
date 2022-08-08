@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,9 +10,9 @@ namespace InsiderScraper
     {
         private StockForecast sf;
         //percentage yield compared to omx
-        private double totalPercentage;
-
-        private double profitPercentage;
+        private double averageOMX = 0;
+        private int averageDays = 0;
+        private double averageProfit = 0;
 
         public Trader(StockForecast sf)
         {
@@ -24,49 +24,51 @@ namespace InsiderScraper
             get { return sf; }
         }
 
-        public void Simulation(EntryOverTime entry)
+        public void Simulation(List<EntryOverTime> entryList)
         {
-            Console.WriteLine(entry.StartDate.AddDays(sf.MeanDevelopment.Item1).ToString("yyyy-MM-dd"));
-            totalPercentage = 0;
-
             //get the omx value for the current Date for the start
-            List<double> stockNOMX = Program.PythonCaller(entry.Företag, entry.StartDate.ToString("yyyy-MM-dd"), "GetDataForSingleDay.py");
+            List<double> result = Program.PythonCaller(sf.EntryList[0].Företag, StockForecast.MakeDateString(entryList), 
+                "EntryAnalyzer.py", 
+                sf.MeanDevelopment.Item1.ToString() + " " + sf.MeanDevelopment.Item2
+            );
 
-            double startOmxPrice = stockNOMX[1];
+            //foreach(double d in result)
+            //{
+            //    Console.WriteLine(d);
+            //}
 
-            //get company share price for the start
-            double startStockPrice = stockNOMX[0];
+            GenerateAverage(result);
+        }
 
-            for (DateTime i = entry.StartDate.AddDays(1); i <= entry.StartDate.AddDays(sf.MeanDevelopment.Item1) && totalPercentage < sf.MeanDevelopment.Item2; i = i.AddDays(1))
+        private void GenerateAverage(List<double> list)
+        {
+            for(int i = 0; i < list.Count; i++)
             {
-                List<double> list = Program.PythonCaller(entry.Företag, i.ToString("yyyy-MM-dd"), "GetDataForSingleDay.py");
-
-                //this is to check if the stockmarket is open
-                if (list.Count > 0)
+                if(i % 3 == 0)
                 {
-                    //get the omx value for the current Date
-                    double omxPrice = list[1];
-
-                    //get company share price
-                    double stockPrice = list[0];
-
-                    //course development
-                    double stockPercentage = (stockPrice / startStockPrice - 1) * 100;
-                    double omxPercentage = (omxPrice / startOmxPrice - 1) * 100;
-
-                    totalPercentage = stockPercentage - omxPercentage;
-                    Console.WriteLine("kommer aldrig hända");
+                    //OMX Growth
+                    averageOMX += list[i];
                 }
-
-                Console.WriteLine(i.ToString("yyyy-MM-dd"));
+                else if(i % 3 == 1)
+                {
+                    //Average Days
+                    averageDays += (int) list[i];
+                }
+                else
+                {
+                    //Stock Growth
+                    averageProfit += list[i];
+                }
             }
-            //sell
-            profitPercentage += totalPercentage;
+
+            averageOMX /= (list.Count / 3);
+            averageDays /= (list.Count / 3);
+            averageProfit /= (list.Count / 3);
         }
 
         public override string ToString()
         {
-            return String.Format("profitPercentage: {0}", profitPercentage);
+            return String.Format("Average OMX Growth: \n{0} | Average Stock Growth {1} | Average days until selling: {2}\n", averageOMX, averageProfit, averageDays);
         }
     }
 }

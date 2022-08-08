@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,12 +31,14 @@ namespace InsiderScraper
 
         public (int, double) StockMeanValues()
         {
-            int totalDays = 0;
-            double totalGrowth = 0;
+            List<Double> result = Program.PythonCaller(entryList[0].Företag, MakeDateString(EntryList), "StockGather.py");
 
-            //make the argument for the python script
+            return ((int) result[1], result[0]);
+        }
+
+        public static string MakeDateString(List<EntryOverTime> entryList)
+        {
             string allDates = String.Empty;
-
             foreach (EntryOverTime entry in entryList)
             {
                 allDates += entry.StartDate.ToString("yyyy-MM-dd") + "Q";
@@ -44,9 +46,7 @@ namespace InsiderScraper
             allDates = allDates.Replace(" ", string.Empty);
             allDates = allDates.Remove(allDates.Length - 1);
 
-            List<Double> result = Program.PythonCaller(entryList[0].Företag, allDates, "StockGather.py");
-
-            return ((int) result[1], result[0]);
+            return allDates;
         }
 
         public override string ToString()

@@ -49,7 +49,7 @@ namespace InsiderScraper
 
         public override string ToString()
         {
-            return String.Format("Datum: {0} | Värde: {1:### ### ###.##}kr | Kurs: {2:n}kr| Volym: {3:# ###} | Company Name: {4:N}", Datum.ToShortDateString(), TotalVärde, Kurs, Volym, företag);
+            return String.Format("Datum: {0} | Värde: {1:### ### ###.##}kr | Kurs: {2:n}kr | Volym: {3:# ###} | Company Name: {4:N}", Datum.ToShortDateString(), TotalVärde, Kurs, Volym, företag);
         }
     }
 }

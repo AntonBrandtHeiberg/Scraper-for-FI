@@ -11,14 +11,12 @@ def printDividendsDate(stock, startDate, endDate = currentDate):
     print(endDate)
     stockVals = yf.Ticker(stock)
     dividends = stockVals.dividends.loc[startDate : endDate]
-    stockCloses = stockVals.history(period="max")
-#    print(pd.to_datetime("2022-07-22"))
-    #print(stockVals.history().loc[[]]["Close"][0])
-    for index, values in zip(dividends.index.tolist(), dividends):
+    stockCloses = stockVals.history(period="max") #gets all historic close-data of the stock 
+    for index, values in zip(dividends.index.tolist(), dividends): #iterates through all dividends 
         if values > 0:
             date = str(index).split(" ")[0]
             stockVal = stockCloses.loc[[pd.to_datetime(date)]]["Close"][0]
-            print(str(index).split(" ")[0] + " " + str(values/stockVal*100))
+            print(str(index).split(" ")[0] + " " + str(values/stockVal*100)) #prints the date and then the value of dividend in %
     
 
 def returnDividendsDate(stock, startDate, endDate = currentDate):

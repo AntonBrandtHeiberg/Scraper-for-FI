@@ -10,6 +10,11 @@ global startStockPrice
 global startIndexVal
 currentDate = str(datetime.date.today()) #sets the current date
 global dividend
+monthAdded= 0
+if(len(sys.argv) > 3):
+    monthAdded = int(sys.argv[3])
+else:
+    monthAdded = 4
 
 def getStockData(stock, startDate, endDate = currentDate):
     return yf.download(stock, start = startDate, end = endDate)
@@ -27,7 +32,7 @@ def getDate(stock, start):
     index = 0
     for startD in startDates:
          st = datetime.datetime.strptime(startD, '%Y-%m-%d').date() #Converts a date yyyy-mm-dd to datetime
-         end = st + relativedelta(months=4)
+         end = st + relativedelta(months=monthAdded)
          result = stockDevelopment(st, end, stockData, indexData, DividendsDates.returnDividendsDate(stock, startDates[0]))#creating a dataframe with stock-index development
          analyzeDataFrame(result, df, index)
          index += 1
@@ -53,7 +58,7 @@ def stockDevelopment(startDate, endDate, stockData, indexData, dividendsData):
             dividendsData.pop(0)
         stockPer = valueChange(csd['Close'].values[i] + dividend, startStockPrice)
         indexPer = valueChange(xid['Close'].values[i], startIndexVal)
-        df.loc[i] = [i, stockPer, indexPer, (stockPer-indexPer*0.25)]
+        df.loc[i] = [i, stockPer, indexPer, (stockPer-indexPer)]
         
     return df
     #Returns the % difference from startvalue and currentvalue

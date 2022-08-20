@@ -7,11 +7,19 @@ import datetime
 
 currentDate = str(datetime.date.today()) #sets the current date
 def printDividendsDate(stock, startDate, endDate = currentDate):
+    print(startDate)
+    print(endDate)
     stockVals = yf.Ticker(stock)
     dividends = stockVals.dividends.loc[startDate : endDate]
-    print(dividends.index.tolist())
+    stockCloses = stockVals.history(period="max")
+#    print(pd.to_datetime("2022-07-22"))
+    #print(stockVals.history().loc[[]]["Close"][0])
     for index, values in zip(dividends.index.tolist(), dividends):
-        print(str(index).split(" ")[0] + " " + str(values))
+        if values > 0:
+            date = str(index).split(" ")[0]
+            stockVal = stockCloses.loc[[pd.to_datetime(date)]]["Close"][0]
+            print(str(index).split(" ")[0] + " " + str(values/stockVal*100))
+    
 
 def returnDividendsDate(stock, startDate, endDate = currentDate):
     stockVals = yf.Ticker(stock)

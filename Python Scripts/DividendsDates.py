@@ -7,8 +7,6 @@ import datetime
 
 currentDate = str(datetime.date.today()) #sets the current date
 def printDividendsDate(stock, startDate, endDate = currentDate):
-    print(startDate)
-    print(endDate)
     stockVals = yf.Ticker(stock)
     dividends = stockVals.dividends.loc[startDate : endDate]
     stockCloses = stockVals.history(period="max") #gets all historic close-data of the stock 

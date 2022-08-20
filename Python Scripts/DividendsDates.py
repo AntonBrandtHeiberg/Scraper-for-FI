@@ -14,7 +14,7 @@ def printDividendsDate(stock, startDate, endDate = currentDate):
         if values > 0:
             date = str(index).split(" ")[0]
             stockVal = stockCloses.loc[[pd.to_datetime(date)]]["Close"][0]
-            print(str(index).split(" ")[0] + " " + str(values/stockVal*100)) #prints the date and then the value of dividend in %
+            print(str(index).split(" ")[0] + " " + str(stockVal) + " " + str(values)) #prints the date and then the value of dividend in %
     
 
 def returnDividendsDate(stock, startDate, endDate = currentDate):

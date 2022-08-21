@@ -20,11 +20,11 @@ def getStockData(stock, startDate, endDate = currentDate):
     return yf.download(stock, start = startDate, end = endDate)
 
 def getDate(stock, start):
-
     startDates = start.split("Q")
     stockData = getStockData(stock, startDates[0]) #Stock-parameter has to be according to how it is shown in https://finance.yahoo.com/
     #and the start/end date is "yyyy-mm-dd"
-    indexData = yf.download('^OMXSPI', start = startDates[0], end = currentDate)
+    indexData = yf.download('^OMXSPI', start = "2013-03-05", end = currentDate) #Start of OMXSPI is this date :/
+    print(indexData.index[0])
     df = pd.DataFrame(
        {
         "MaxDays": [], "MaxPercentage": [], "MinDays":[], "MinPercentage":[]
@@ -33,7 +33,7 @@ def getDate(stock, start):
     for startD in startDates:
          st = datetime.datetime.strptime(startD, '%Y-%m-%d').date() #Converts a date yyyy-mm-dd to datetime
          end = st + relativedelta(months=monthAdded)
-         result = stockDevelopment(st, end, stockData, indexData, DividendsDates.returnDividendsDate(stock, startDates[0]))#creating a dataframe with stock-index development
+         result = stockDevelopment(st, end, stockData, indexData, DividendsDates.returnDividendsDate(stock, startD))#creating a dataframe with stock-index development
          analyzeDataFrame(result, df, index)
          index += 1
     printValues(df)
@@ -58,7 +58,7 @@ def stockDevelopment(startDate, endDate, stockData, indexData, dividendsData):
             dividendsData.pop(0)
         stockPer = valueChange(csd['Close'].values[i] + dividend, startStockPrice)
         indexPer = valueChange(xid['Close'].values[i], startIndexVal)
-        df.loc[i] = [i, stockPer, indexPer, (stockPer-indexPer)]
+        df.loc[i] = [i, stockPer, indexPer, stockPer]
         
     return df
     #Returns the % difference from startvalue and currentvalue
@@ -89,7 +89,5 @@ def printValues(df):
 #Start of program
 #if int(sys.argv[2].split("-")[1]) % 4 == 0:
 #    lengthOfMonth[2] = 29 #when feb has 29 days 
-stock = "VOLV-B.ST"
-dates = "2022-02-09 2022-03-16 2022-04-25 2022-04-26"
 getDate(sys.argv[1], sys.argv[2]) #Argument 1 is the stock to investigate
-    #Argument 2 is all startdates
+    #Argument 2 is all startdates               
